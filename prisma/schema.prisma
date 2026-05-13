@@ -33,11 +33,23 @@ model Agendamento {
   id         Int      @id @default(autoincrement())
   data       DateTime
   status     String   @default("agendado")
-  procedimento String
+  procedimentoId Int
   pacienteId Int
   dentistaId Int
-  createdAt  DateTime @default(now())
+  createdAdd DateTime @default(now())
+  creatDataAlt DateTime @default(now())
 
   paciente Paciente @relation(fields: [pacienteId], references: [id])
   dentista Dentista @relation(fields: [dentistaId], references: [id])
+}
+
+model Procedimento {
+  id    Int  @id @default(autoincrement())
+  description String 
+  status Int 
+}
+
+model ProcedimentoStatus {
+  id Int @id @default(autoincrement())
+  description String
 }
