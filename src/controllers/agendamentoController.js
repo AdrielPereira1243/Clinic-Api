@@ -58,6 +58,7 @@ const buscarAgendamento = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Erro ao buscar agendamento" });
   }
+};
 
 const cancelarAgendamento = async (req, res) => {
   try {
@@ -72,6 +73,11 @@ const cancelarAgendamento = async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: "Erro ao cancelar agendamento" });
   }
-  };
-}
-module.exports = { criarAgendamento, listarAgendamentos, buscarAgendamento, cancelarAgendamento };
+};
+
+module.exports = {
+  criarAgendamento,
+  listarAgendamentos,
+  buscarAgendamento,
+  cancelarAgendamento,
+};

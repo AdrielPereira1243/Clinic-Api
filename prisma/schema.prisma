@@ -3,53 +3,78 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
+// tabela responsável pelo login de todos os usuários
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  senha     String
+  papel     String   @default("paciente") // paciente, dentista ou admin
+  createdAt DateTime @default(now())
+
+  paciente  Paciente?
+  dentista  Dentista?
+}
+
+// dados clínicos do paciente
 model Paciente {
   id        Int      @id @default(autoincrement())
   nome      String
   email     String   @unique
   telefone  String
   cpf       String   @unique
+  usuarioId Int?     @unique // ligação com a tabela Usuario
   createdAt DateTime @default(now())
 
+  usuario      Usuario?     @relation(fields: [usuarioId], references: [id])
   agendamentos Agendamento[]
 }
 
+// dados profissionais do dentista
 model Dentista {
   id        Int      @id @default(autoincrement())
   nome      String
   email     String   @unique
   telefone  String
   cro       String   @unique
+  usuarioId Int?     @unique // ligação com a tabela Usuario
   createdAt DateTime @default(now())
+
+  usuario      Usuario?     @relation(fields: [usuarioId], references: [id])
+  agendamentos Agendamento[]
+}
+
+// agendamentos entre paciente e dentista
+model Agendamento {
+  id             Int      @id @default(autoincrement())
+  data           DateTime
+  status         String   @default("agendado") // agendado, cancelado, concluido
+  procedimentoId Int      // qual procedimento será realizado
+  pacienteId     Int      // qual paciente
+  dentistaId     Int      // qual dentista
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  paciente     Paciente     @relation(fields: [pacienteId], references: [id])
+  dentista     Dentista     @relation(fields: [dentistaId], references: [id])
+  procedimento Procedimento @relation(fields: [procedimentoId], references: [id])
+}
+
+// tipos de procedimentos disponíveis na clínica
+model Procedimento {
+  id          Int    @id @default(autoincrement())
+  description String
+  status      Int    // 1 = ativo, 0 = inativo
 
   agendamentos Agendamento[]
 }
 
-model Agendamento {
-  id         Int      @id @default(autoincrement())
-  data       DateTime
-  status     String   @default("agendado")
-  procedimentoId Int
-  pacienteId Int
-  dentistaId Int
-  createdAdd DateTime @default(now())
-  creatDataAlt DateTime @default(now())
-
-  paciente Paciente @relation(fields: [pacienteId], references: [id])
-  dentista Dentista @relation(fields: [dentistaId], references: [id])
-}
-
-model Procedimento {
-  id    Int  @id @default(autoincrement())
-  description String 
-  status Int 
-}
-
+// status possíveis dos procedimentos
 model ProcedimentoStatus {
-  id Int @id @default(autoincrement())
+  id          Int    @id @default(autoincrement())
   description String
 }
