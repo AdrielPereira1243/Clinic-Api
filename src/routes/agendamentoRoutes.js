@@ -6,10 +6,30 @@ const {
   buscarAgendamento,
   cancelarAgendamento,
 } = require("../controllers/agendamentoController");
+const { autenticar } = require("../middlewares/authMiddleware");
+const { autorizarPapeis } = require("../middlewares/autorizarMiddleware");
 
-router.post("/", criarAgendamento);
-router.get("/", listarAgendamentos);
-router.get("/:id", buscarAgendamento);
-router.patch("/:id/cancelar", cancelarAgendamento);
+router.use(autenticar);
+
+router.post(
+  "/",
+  autorizarPapeis("paciente", "dentista", "admin"),
+  criarAgendamento,
+);
+router.get(
+  "/",
+  autorizarPapeis("paciente", "dentista", "admin"),
+  listarAgendamentos,
+);
+router.get(
+  "/:id",
+  autorizarPapeis("paciente", "dentista", "admin"),
+  buscarAgendamento,
+);
+router.patch(
+  "/:id/cancelar",
+  autorizarPapeis("paciente", "dentista", "admin"),
+  cancelarAgendamento,
+);
 
 module.exports = router;
