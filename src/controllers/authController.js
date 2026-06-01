@@ -3,34 +3,47 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const prisma = new PrismaClient();
-const JWT_SECRET =
-  process.env.JWT_SECRET || "sua_chave_secreta_super_segura_aqui";
 
-// Registro de novo paciente
+const gerarToken = (usuario) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET nao configurado");
+  }
+
+  return jwt.sign(
+    { id: usuario.id, email: usuario.email, papel: usuario.papel },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || "1d" },
+  );
+};
+
 const registrar = async (req, res) => {
   try {
     const { email, senha, nome, cpf, telefone } = req.body;
 
-    // Validações básicas
     if (!email || !senha || !nome || !cpf || !telefone) {
       return res
         .status(400)
-        .json({ error: "Todos os campos são obrigatórios" });
+        .json({ error: "Todos os campos sao obrigatorios" });
     }
 
-    // Verificar se usuário já existe
     const usuarioExistente = await prisma.usuario.findUnique({
       where: { email },
     });
 
     if (usuarioExistente) {
-      return res.status(400).json({ error: "Email já cadastrado" });
+      return res.status(400).json({ error: "Email ja cadastrado" });
     }
 
-    // Hash da senha
+    const pacienteExistente = await prisma.paciente.findUnique({
+      where: { cpf },
+    });
+
+    if (pacienteExistente) {
+      return res.status(400).json({ error: "CPF ja cadastrado" });
+    }
+
     const senhaHash = await bcrypt.hash(senha, 10);
 
-    // Criar usuário e paciente
     const usuario = await prisma.usuario.create({
       data: {
         email,
@@ -50,14 +63,9 @@ const registrar = async (req, res) => {
       },
     });
 
-    // Gerar JWT
-    const token = jwt.sign(
-      { id: usuario.id, email: usuario.email, papel: usuario.papel },
-      JWT_SECRET,
-      { expiresIn: "1d" },
-    );
+    const token = gerarToken(usuario);
 
-    res.status(201).json({
+    return res.status(201).json({
       token,
       usuario: {
         id: usuario.id,
@@ -68,21 +76,27 @@ const registrar = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: "Erro ao registrar paciente" });
+
+    if (error.code === "P2002") {
+      return res.status(400).json({ error: "Email ou CPF ja cadastrado" });
+    }
+
+    if (error.message === "JWT_SECRET nao configurado") {
+      return res.status(500).json({ error: "JWT_SECRET nao configurado" });
+    }
+
+    return res.status(500).json({ error: "Erro ao registrar paciente" });
   }
 };
 
-// Login
 const login = async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    // Validações básicas
     if (!email || !senha) {
-      return res.status(400).json({ error: "Email e senha são obrigatórios" });
+      return res.status(400).json({ error: "Email e senha sao obrigatorios" });
     }
 
-    // Buscar usuário
     const usuario = await prisma.usuario.findUnique({
       where: { email },
       include: {
@@ -95,21 +109,15 @@ const login = async (req, res) => {
       return res.status(401).json({ error: "Email ou senha incorretos" });
     }
 
-    // Verificar senha
     const senhaValida = await bcrypt.compare(senha, usuario.senha);
 
     if (!senhaValida) {
       return res.status(401).json({ error: "Email ou senha incorretos" });
     }
 
-    // Gerar JWT
-    const token = jwt.sign(
-      { id: usuario.id, email: usuario.email, papel: usuario.papel },
-      JWT_SECRET,
-      { expiresIn: "1d" },
-    );
+    const token = gerarToken(usuario);
 
-    res.json({
+    return res.json({
       token,
       usuario: {
         id: usuario.id,
@@ -121,7 +129,12 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: "Erro ao fazer login" });
+
+    if (error.message === "JWT_SECRET nao configurado") {
+      return res.status(500).json({ error: "JWT_SECRET nao configurado" });
+    }
+
+    return res.status(500).json({ error: "Erro ao fazer login" });
   }
 };
 

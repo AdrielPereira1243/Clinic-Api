@@ -5,9 +5,21 @@ const {
   listarPacientes,
   buscarPaciente,
 } = require("../controllers/pacienteController");
+const { autenticar } = require("../middlewares/authMiddleware");
+const { autorizarPapeis } = require("../middlewares/autorizarMiddleware");
 
-router.post("/", criarPaciente);
-router.get("/", listarPacientes);
-router.get(":id", buscarPaciente);
+router.use(autenticar);
+
+router.post("/", autorizarPapeis("paciente", "admin"), criarPaciente);
+router.get(
+  "/",
+  autorizarPapeis("paciente", "dentista", "admin"),
+  listarPacientes,
+);
+router.get(
+  "/:id",
+  autorizarPapeis("paciente", "dentista", "admin"),
+  buscarPaciente,
+);
 
 module.exports = router;
